@@ -12,9 +12,17 @@ import './styles.css';
 export default function App() {
   // ── Estado ───────────────────────────────────────────────────────────────
   // index: posición (0-based) del testimonio actualmente visible.
-  const [index, setIndex] = useState(0);
+  // Se inicializa buscando en localStorage para mantener el estado.
+  const [index, setIndex] = useState(() => {
+    const saved = localStorage.getItem('testimonialIndex');
+    return saved !== null ? parseInt(saved, 10) : 0;
+  });
   const [isPlaying, setIsPlaying] = useState(true);
   const length = testimonios.length;
+
+  useEffect(() => {
+    localStorage.setItem('testimonialIndex', index);
+  }, [index]);
 
   // autoplayRef guarda el ID del intervalo sin provocar re-renders al cambiar.
   // useState provocaría un render extra cada vez que se resetea el intervalo.
@@ -69,14 +77,31 @@ export default function App() {
   const play = () => setIsPlaying(true);
   const pause = () => setIsPlaying(false);
 
+  // ── Teclado ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        handleUserAction(() => setIndex(prev => (prev - 1 + length) % length));
+      } else if (e.key === 'ArrowRight') {
+        handleUserAction(() => setIndex(prev => (prev + 1) % length));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [length, isPlaying]);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <main className="app">
       <h1>Testimonios</h1>
 
-      <div className="card-wrapper">
-        {/* Se pasa el objeto completo del testimonio activo como prop `item` */}
-        <Testimonial item={testimonios[index]} />
+      <div 
+        className="card-wrapper"
+        onMouseEnter={pause}
+        onMouseLeave={play}
+      >
+        {/* La propiedad key fuerza a React a desmontar y montar el componente, disparando la animación */}
+        <Testimonial key={index} item={testimonios[index]} />
       </div>
 
       {/*
